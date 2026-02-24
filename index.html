@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Grocery App</title>
+
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #222;
+      --primary: #4CAF50;
+    }
+
+    .dark {
+      --bg: #1e1e1e;
+      --card: #2c2c2c;
+      --text: #fff;
+      --primary: #81C784;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      padding: 15px;
+    }
+
+    .card {
+      background: var(--card);
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 15px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 10px;
+      width: 100%;
+      margin-top: 5px;
+      border: none;
+      border-radius: 6px;
+      background: var(--primary);
+      color: white;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: #ddd;
+      padding: 10px;
+      margin-top: 8px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .dark li {
+      background: #444;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .small-btn {
+      width: auto;
+      padding: 6px 10px;
+      margin-left: 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <div class="topbar">
+      <h2>🛒 Smart Grocery</h2>
+      <button class="small-btn" onclick="toggleDark()">🌙</button>
+    </div>
+
+    <div class="card">
+      <input id="name" placeholder="Item Name">
+      <input id="price" type="number" placeholder="Price">
+      <input id="qty" type="number" value="1">
+      <select id="category">
+        <option>Vegetables</option>
+        <option>Fruits</option>
+        <option>Dairy</option>
+        <option>Snacks</option>
+        <option>Other</option>
+      </select>
+      <button onclick="addItem()">Add Item</button>
+      <button onclick="startScanner()">📷 Scan Barcode</button>
+    </div>
+
+    <div class="card">
+      <ul id="list"></ul>
+      <div id="total"><b>Total: ₹0</b></div>
+    </div>
+
+    <div class="card">
+      <h3>📊 Monthly Report</h3>
+      <div id="report"></div>
+      <button onclick="exportPDF()">Export PDF</button>
+      <button onclick="exportData()">Export Family Data</button>
+      <input type="file" onchange="importData(event)">
+    </div>
+
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script>
+    let items = JSON.parse(localStorage.getItem("grocery")) || [];
+
+    function save() {
+      localStorage.setItem("grocery", JSON.stringify(items));
+    }
+
+    function addItem() {
+      const name = nameEl.value;
+      const price = parseFloat(priceEl.value);
+      const qty = parseInt(qtyEl.value);
+      const category = categoryEl.value;
+      const date = new Date().toISOString();
+
+      if (!name || !price || !qty) return alert("Fill all fields");
+
+      items.push({ name, price, qty, category, date });
+      save();
+      render();
+      clearForm();
+    }
+
+    function render() {
+      list.innerHTML = "";
+      let total = 0;
+      let monthly = {};
+
+      items.forEach((item, i) => {
+        total += item.price * item.qty;
+
+        const month = item.date.slice(0, 7);
+        monthly[month] = (monthly[month] || 0) + (item.price * item.qty);
+
+        const li = document.createElement("li");
+        li.innerHTML = `${item.name} (${item.qty}) - ₹${item.price * item.qty}
+    <button onclick="removeItem(${i})" class="small-btn" style="background:red">X</button>`;
+        list.appendChild(li);
+      });
+
+      totalEl.innerHTML = "<b>Total: ₹" + total + "</b>";
+
+      report.innerHTML = "";
+      for (let m in monthly) {
+        report.innerHTML += `<div>${m} : ₹${monthly[m]}</div>`;
+      }
+    }
+
+    function removeItem(i) {
+      items.splice(i, 1);
+      save();
+      render();
+    }
+
+    function clearForm() {
+      nameEl.value = "";
+      priceEl.value = "";
+      qtyEl.value = 1;
+    }
+
+    function toggleDark() {
+      document.body.classList.toggle("dark");
+    }
+
+    function exportPDF() {
+      const win = window.open();
+      win.document.write("<h2>Grocery Report</h2>");
+      win.document.write("<pre>" + JSON.stringify(items, null, 2) + "</pre>");
+      win.print();
+    }
+
+    function exportData() {
+      const blob = new Blob([JSON.stringify(items)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "family-grocery.json";
+      a.click();
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function () {
+        items = JSON.parse(reader.result);
+        save();
+        render();
+      };
+      reader.readAsText(file);
+    }
+
+    /* Barcode Scanner */
+    function startScanner() {
+      const scannerDiv = document.createElement("div");
+      scannerDiv.id = "reader";
+      document.body.appendChild(scannerDiv);
+
+      const html5QrCode = new Html5Qrcode("reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 150 },
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        },
+        decodedText => {
+          nameEl.value = "Product-" + decodedText;
+          html5QrCode.stop();
+          document.getElementById("reader").remove();
+        }
+      );
+    }
+
+    /* Elements */
+    const nameEl = document.getElementById("name");
+    const priceEl = document.getElementById("price");
+    const qtyEl = document.getElementById("qty");
+    const categoryEl = document.getElementById("category");
+    const list = document.getElementById("list");
+    const totalEl = document.getElementById("total");
+    const report = document.getElementById("report");
+
+    render();
+  </script>
+
+</body>
+
+</html>
