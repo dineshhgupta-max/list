@@ -239,7 +239,40 @@
           }
         },
         decodedText => {
-          nameEl.value = "Product-" + decodedText;
+
+          fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`)
+            .then(res => res.json())
+            .then(data => {
+
+              if (data.status === 1) {
+                const product = data.product;
+
+                nameEl.value = product.product_name || "Unknown Product";
+
+                // Try to auto-detect category
+                if (product.categories) {
+                  const cat = product.categories.toLowerCase();
+
+                  if (cat.includes("milk") || cat.includes("dairy")) {
+                    categoryEl.value = "Dairy";
+                  } else if (cat.includes("fruit")) {
+                    categoryEl.value = "Fruits";
+                  } else if (cat.includes("vegetable")) {
+                    categoryEl.value = "Vegetables";
+                  } else {
+                    categoryEl.value = "Other";
+                  }
+                }
+
+              } else {
+                nameEl.value = "Unknown Product (" + decodedText + ")";
+              }
+
+            })
+            .catch(() => {
+              nameEl.value = "Product-" + decodedText;
+            });
+
           html5QrCode.stop();
           document.getElementById("reader").remove();
         }
