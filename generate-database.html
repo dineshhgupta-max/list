@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Generate Indian Grocery Database</title>
+</head>
+<body>
+
+<h2>Generate 500+ Indian Grocery Database</h2>
+<button onclick="generate()">Generate & Download</button>
+
+<script>
+function generate() {
+
+const categories = {
+  Dairy: ["Amul Milk", "Mother Dairy Milk", "Paneer", "Curd", "Butter", "Cheese"],
+  Snacks: ["Parle-G", "Good Day", "Maggi", "Lays", "Kurkure", "Haldiram Bhujia"],
+  Beverages: ["Coca Cola", "Pepsi", "Frooti", "Maaza", "Red Bull"],
+  Grains: ["Basmati Rice", "Wheat Flour", "Poha", "Suji"],
+  Pulses: ["Toor Dal", "Moong Dal", "Chana Dal", "Rajma"],
+  Spices: ["Turmeric Powder", "Red Chilli Powder", "Garam Masala", "Coriander Powder"],
+  Oils: ["Sunflower Oil", "Mustard Oil", "Groundnut Oil"],
+  PersonalCare: ["Colgate Toothpaste", "Lux Soap", "Clinic Plus Shampoo"],
+  Household: ["Surf Excel", "Vim Bar", "Harpic", "Lizol"]
+};
+
+let products = [];
+let barcodeBase = 8901000000000;
+
+Object.keys(categories).forEach(category => {
+  for (let i = 0; i < 60; i++) {
+
+    const itemName = categories[category][i % categories[category].length] + " " + (i+1);
+
+    products.push({
+      barcode: (barcodeBase++).toString(),
+      name: itemName,
+      category: category,
+      defaultPrice: Math.floor(Math.random() * 200) + 10
+    });
+  }
+});
+
+const blob = new Blob([JSON.stringify(products, null, 2)], {type: "application/json"});
+const a = document.createElement("a");
+a.href = URL.createObjectURL(blob);
+a.download = "indian-products.json";
+a.click();
+
+}
+</script>
+
+</body>
+</html>
